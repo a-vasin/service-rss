@@ -46,8 +46,6 @@ test: clean
 coverage: clean
 	$(GO) test -v -cover $(GOPACKAGES)
 
-imports-install: toolset
-
 imports:
 	@./bin/goimports -ungroup -local service-rss -w ./internal ./cmd
 
