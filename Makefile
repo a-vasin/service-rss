@@ -20,9 +20,13 @@ help:
 	@echo "fmt              - format application sources"
 	@echo "check            - check code style"
 	@echo "run              - start application"
-	@echo "imports-install  - install goimport to local ./bin"
+	@echo "test             - run tests"
 	@echo "imports          - format imports"
 	@echo "deps-tidy        - go mod tidy && go mod vendor"
+	@echo "toolset          - install tools to local ./bin"
+	@echo "go-generate      - generate mocks"
+	@echo "run-local-db     - start postgres db in docker container on port 5444"
+	@echo "stop-local-db    - stop and remove docker container with db"
 
 build: clean fmt check
 	GOPATH=$(GOPATH) go build -o bin/service-entrypoint ./cmd/service
@@ -43,9 +47,6 @@ check:
 test: clean
 	$(GO) test $(GOPACKAGES)
 
-coverage: clean
-	$(GO) test -v -cover $(GOPACKAGES)
-
 imports:
 	@./bin/goimports -ungroup -local service-rss -w ./internal ./cmd
 
@@ -65,3 +66,8 @@ toolset:
 go-generate:
 	@go generate $(GOPACKAGES)
 
+run-local-db:
+	./db/scripts/run.sh
+
+stop-local-db:
+	./db/scripts/stop.sh
