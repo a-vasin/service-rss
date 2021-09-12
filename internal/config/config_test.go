@@ -1,13 +1,19 @@
 package config
 
 import (
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var (
-	configValues = map[string]string{}
+	configValues = map[string]string{
+		"RSS_DB_HOST":       "host",
+		"RSS_DB_PORT":       "5444",
+		"RSS_DB_ENABLE_SSL": "true",
+	}
 )
 
 func TestRead(t *testing.T) {
@@ -16,6 +22,12 @@ func TestRead(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
-	_, err := Read()
+	cfg, err := Read()
 	assert.Nil(t, err)
+
+	assert.Equal(t, 5444, cfg.DbPort)
+	assert.Equal(t, "host", cfg.DbHost)
+	assert.Equal(t, "postgres", cfg.DbName)
+	assert.Equal(t, 300*time.Millisecond, cfg.ServerReadTimeout)
+	assert.True(t, cfg.DbEnableSsl)
 }

@@ -1,5 +1,6 @@
 create table rss
 (
-    name    text primary key,
-    sources text[]
+    id      serial primary key,
+    name    text unique not null,
+    sources text[]      not null
 )

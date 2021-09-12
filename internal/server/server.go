@@ -2,46 +2,50 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	log "github.com/sirupsen/logrus"
+	"github.com/xeipuuv/gojsonschema"
 
+	"service-rss/internal/config"
+	"service-rss/internal/database"
 	"service-rss/internal/handlers"
-)
-
-var (
-	defaultServeTimeout = 10 * time.Second
 )
 
 type Server struct {
 	server *http.Server
+	db     database.Database
 }
 
-func New() *Server {
+func New(cfg *config.Config, db database.Database) (*Server, error) {
 	router := chi.NewRouter()
 
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
-	router.Use(middleware.Timeout(defaultServeTimeout))
 	router.Use(middleware.AllowContentType("application/json"))
 
-	rssCreateHandler := handlers.NewRssCreateHandler()
+	schema, err := loadJsonSchema("jsonschema/api/rss/create/request.json")
+	if err != nil {
+		return nil, err
+	}
+
+	rssCreateHandler := handlers.NewRssCreateHandler(db, schema)
 	router.Post("/api/rss/create", rssCreateHandler.ServeHTTP)
 
 	server := &http.Server{
-		Addr:         ":80",
+		Addr:         fmt.Sprintf(":%d", cfg.ServerPort),
 		Handler:      router,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
+		ReadTimeout:  cfg.ServerReadTimeout,
+		WriteTimeout: cfg.ServerWriteTimeout,
 	}
 
 	return &Server{
 		server: server,
-	}
+		db:     db,
+	}, nil
 }
 
 func (s *Server) Start() {
@@ -53,8 +57,14 @@ func (s *Server) Start() {
 	}()
 }
 
-func (s *Server) Shutdown() {
-	ctx, cancel := context.WithTimeout(context.Background(), defaultServeTimeout)
+func (s *Server) Shutdown() error {
+	ctx, cancel := context.WithTimeout(context.Background(), s.server.WriteTimeout)
 	defer cancel()
-	_ = s.server.Shutdown(ctx)
+	return s.server.Shutdown(ctx)
+}
+
+func loadJsonSchema(path string) (*gojsonschema.Schema, error) {
+	path = fmt.Sprintf("file://%s", path)
+	schemaLoader := gojsonschema.NewReferenceLoader(path)
+	return gojsonschema.NewSchema(schemaLoader)
 }
