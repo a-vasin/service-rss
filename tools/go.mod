@@ -1,4 +1,4 @@
-module go.avito.ru/av/service-search/tools
+module tools
 
 go 1.16
 

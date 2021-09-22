@@ -3,11 +3,9 @@ GOPATH?=$(shell go env GOPATH)
 GOPACKAGES=$(shell go list ./... | grep -v generated)
 
 GOFLAGS   = -mod=vendor
-GOPRIVATE = go.avito.ru
 GOPROXY   = direct
 
 export GOFLAGS   := $(GOFLAGS)
-export GOPRIVATE := $(GOPRIVATE)
 export GOPROXY   := $(GOPROXY)
 export GOBIN     := $(PWD)/bin
 
