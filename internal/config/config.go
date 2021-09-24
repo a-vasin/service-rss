@@ -18,6 +18,9 @@ type Config struct {
 	ServerPort         int           `env:"RSS_SERVER_PORT" envDefault:"80"`
 	ServerReadTimeout  time.Duration `env:"RSS_SERVER_READ_TIMEOUT" envDefault:"300ms"`
 	ServerWriteTimeout time.Duration `env:"RSS_SERVER_WRITE_TIMEOUT" envDefault:"5000ms"`
+
+	CacherWorkersCount int           `env:"RSS_CACHER_WORKERS_COUNT" envDefault:"4"`
+	CacherPullPeriod   time.Duration `env:"RSS_CACHER_PULL_PERIOD" envDefault:"5s"`
 }
 
 func Read() (*Config, error) {

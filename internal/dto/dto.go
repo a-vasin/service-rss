@@ -33,3 +33,8 @@ type RssFeedItem struct {
 	PubDate     string   `xml:"pubDate,omitempty"`
 	Source      string   `xml:"source,omitempty"`
 }
+
+type RssCreateIn struct {
+	Name    string   `json:"name"`
+	Sources []string `json:"sources"`
+}

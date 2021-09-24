@@ -27,11 +27,6 @@ func NewRssCreateHandler(db database.Database, schema *gojsonschema.Schema) http
 	}
 }
 
-type rssCreateIn struct {
-	Name    string   `json:"name"`
-	Sources []string `json:"sources"`
-}
-
 func (h *rssCreateHandler) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
 	bodyBytes, err := ioutil.ReadAll(req.Body)
 	if err != nil {
@@ -57,7 +52,7 @@ func (h *rssCreateHandler) ServeHTTP(writer http.ResponseWriter, req *http.Reque
 		return
 	}
 
-	in := &rssCreateIn{}
+	in := &dto.RssCreateIn{}
 	err = json.Unmarshal(bodyBytes, &in)
 	if err != nil {
 		writeBadRequest(writer, "failed to unmarshal input", string(bodyBytes))
@@ -78,7 +73,11 @@ func (h *rssCreateHandler) ServeHTTP(writer http.ResponseWriter, req *http.Reque
 		return
 	}
 
-	err = h.db.CreateRss(in.Name, in.Sources)
+	rss := &database.Rss{
+		Name:    in.Name,
+		Sources: in.Sources,
+	}
+	err = h.db.CreateRss(rss)
 	if err != nil {
 		writeInternalError(writer, "failed to create rss", err)
 		return

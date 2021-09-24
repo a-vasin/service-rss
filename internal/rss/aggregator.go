@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"service-rss/internal/database"
 	"service-rss/internal/dto"
 )
 
@@ -15,28 +16,33 @@ const (
 	defaultTtl = 5 // rss ttl is in minutes according to specification
 )
 
-type Builder interface {
-	Build(name string, sources []string) *dto.RssFeed
+type Aggregator interface {
+	Aggregate(rss *database.Rss) *dto.RssFeed
 }
 
-type builder struct {
+type aggregator struct {
 	fetcher Fetcher
 }
 
-func NewBuilder(fetcher Fetcher) Builder {
-	return &builder{
+func NewAggregator(fetcher Fetcher) Aggregator {
+	return &aggregator{
 		fetcher: fetcher,
 	}
 }
 
-func (b *builder) Build(name string, sources []string) *dto.RssFeed {
+func (b *aggregator) Aggregate(rss *database.Rss) *dto.RssFeed {
+	if rss == nil {
+		log.Error("empty rss")
+		return nil
+	}
+
 	ttl := int64(math.MaxInt64)
-	inputFeeds := make([]*dto.RssFeed, 0, len(sources))
-	for _, rssUrl := range sources {
+	inputFeeds := make([]*dto.RssFeed, 0, len(rss.Sources))
+	for _, rssUrl := range rss.Sources {
 		feed, err := b.fetcher.Fetch(rssUrl)
 		if err != nil {
 			ttl = defaultTtl
-			log.WithError(err).WithField("url", rssUrl).WithField("name", name).Warn("failed to get rss feed")
+			log.WithError(err).WithField("url", rssUrl).WithField("name", rss.Name).Warn("failed to get rss feed")
 			continue
 		}
 

@@ -9,6 +9,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"service-rss/internal/database"
 	"service-rss/internal/dto"
 )
 
@@ -104,8 +105,13 @@ func TestBuilder_Build(t *testing.T) {
 			f.EXPECT().Fetch(url).Return(feed, nil)
 		}
 
-		b := NewBuilder(f)
-		feed := b.Build("test", []string{"https://one.com/", "https://two.com/", "https://three.com/"})
+		b := NewAggregator(f)
+
+		rss := &database.Rss{
+			Name:    "test",
+			Sources: []string{"https://one.com/", "https://two.com/", "https://three.com/"},
+		}
+		feed := b.Aggregate(rss)
 
 		buildDate := feed.Channel.LastBuildDate
 		_, err := time.Parse(time.RFC1123, buildDate)
@@ -120,8 +126,13 @@ func TestBuilder_Build(t *testing.T) {
 		f := NewMockFetcher(ctrl)
 		f.EXPECT().Fetch(gomock.Any()).Return(nil, errors.New("error"))
 
-		b := NewBuilder(f)
-		feed := b.Build("test", []string{"https://one.com/"})
+		b := NewAggregator(f)
+
+		rss := &database.Rss{
+			Name:    "test",
+			Sources: []string{"https://one.com/"},
+		}
+		feed := b.Aggregate(rss)
 
 		feed.Channel.LastBuildDate = ""
 

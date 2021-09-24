@@ -6,6 +6,7 @@ package database
 
 import (
 	reflect "reflect"
+	time "time"
 
 	gomock "github.com/golang/mock/gomock"
 )
@@ -34,17 +35,46 @@ func (m *MockDatabase) EXPECT() *MockDatabaseMockRecorder {
 }
 
 // CreateRss mocks base method.
-func (m *MockDatabase) CreateRss(name string, sources []string) error {
+func (m *MockDatabase) CreateRss(arg0 *Rss) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateRss", name, sources)
+	ret := m.ctrl.Call(m, "CreateRss", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateRss indicates an expected call of CreateRss.
-func (mr *MockDatabaseMockRecorder) CreateRss(name, sources interface{}) *gomock.Call {
+func (mr *MockDatabaseMockRecorder) CreateRss(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRss", reflect.TypeOf((*MockDatabase)(nil).CreateRss), name, sources)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRss", reflect.TypeOf((*MockDatabase)(nil).CreateRss), arg0)
+}
+
+// GetItemsToCache mocks base method.
+func (m *MockDatabase) GetItemsToCache() (map[int64]*Rss, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetItemsToCache")
+	ret0, _ := ret[0].(map[int64]*Rss)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetItemsToCache indicates an expected call of GetItemsToCache.
+func (mr *MockDatabaseMockRecorder) GetItemsToCache() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItemsToCache", reflect.TypeOf((*MockDatabase)(nil).GetItemsToCache))
+}
+
+// SaveCache mocks base method.
+func (m *MockDatabase) SaveCache(id int64, rssFeed string, validUntil time.Time) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveCache", id, rssFeed, validUntil)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveCache indicates an expected call of SaveCache.
+func (mr *MockDatabaseMockRecorder) SaveCache(id, rssFeed, validUntil interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveCache", reflect.TypeOf((*MockDatabase)(nil).SaveCache), id, rssFeed, validUntil)
 }
 
 // Shutdown mocks base method.
