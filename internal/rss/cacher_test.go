@@ -1,6 +1,7 @@
 package rss
 
 import (
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -20,7 +21,7 @@ func TestCacher_Shutdown(t *testing.T) {
 	aggregator := NewAggregator(fetcher)
 
 	db := database.NewMockDatabase(ctrl)
-	db.EXPECT().GetItemsToCache().AnyTimes().Return(nil, nil)
+	db.EXPECT().GetItemsToCache(gomock.Any()).AnyTimes().Return(nil, nil)
 
 	cfg := &config.Config{
 		CacherPullPeriod:   30 * time.Second,
@@ -50,7 +51,7 @@ func TestCacher_PushTasks(t *testing.T) {
 	defer ctrl.Finish()
 
 	db := database.NewMockDatabase(ctrl)
-	db.EXPECT().GetItemsToCache().AnyTimes().Return(map[int64]*database.Rss{
+	db.EXPECT().GetItemsToCache(gomock.Any()).AnyTimes().Return(map[int64]*database.Rss{
 		1: {
 			Name: "first",
 		},
@@ -97,6 +98,9 @@ func TestCacher_PushTasks(t *testing.T) {
 	case <-timeout:
 		t.Fatal("test didn't finish in time")
 	case actual := <-resultChan:
+		sort.Slice(actual, func(i, j int) bool {
+			return actual[i].id < actual[j].id
+		})
 		assert.Equal(t, expected, actual)
 	}
 }

@@ -49,18 +49,18 @@ func (mr *MockDatabaseMockRecorder) CreateRss(arg0 interface{}) *gomock.Call {
 }
 
 // GetItemsToCache mocks base method.
-func (m *MockDatabase) GetItemsToCache() (map[int64]*Rss, error) {
+func (m *MockDatabase) GetItemsToCache(batchSize int) (map[int64]*Rss, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetItemsToCache")
+	ret := m.ctrl.Call(m, "GetItemsToCache", batchSize)
 	ret0, _ := ret[0].(map[int64]*Rss)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetItemsToCache indicates an expected call of GetItemsToCache.
-func (mr *MockDatabaseMockRecorder) GetItemsToCache() *gomock.Call {
+func (mr *MockDatabaseMockRecorder) GetItemsToCache(batchSize interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItemsToCache", reflect.TypeOf((*MockDatabase)(nil).GetItemsToCache))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItemsToCache", reflect.TypeOf((*MockDatabase)(nil).GetItemsToCache), batchSize)
 }
 
 // SaveCache mocks base method.

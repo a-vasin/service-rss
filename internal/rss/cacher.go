@@ -22,6 +22,7 @@ type Cacher struct {
 	rssChan      chan *rssWithID
 	workersCount int
 	pullPeriod   time.Duration
+	batchSize    int
 
 	// graceful shutdown helper channels
 	initChan         chan interface{}
@@ -31,11 +32,13 @@ type Cacher struct {
 
 func NewCacher(cfg *config.Config, db database.Database, aggregator Aggregator) *Cacher {
 	return &Cacher{
-		db:               db,
-		aggregator:       aggregator,
-		rssChan:          make(chan *rssWithID, cfg.CacherWorkersCount),
-		workersCount:     cfg.CacherWorkersCount,
-		pullPeriod:       cfg.CacherPullPeriod,
+		db:           db,
+		aggregator:   aggregator,
+		rssChan:      make(chan *rssWithID, cfg.CacherWorkersCount),
+		workersCount: cfg.CacherWorkersCount,
+		pullPeriod:   cfg.CacherPullPeriod,
+		batchSize:    cfg.CacherBatchSize,
+
 		initChan:         make(chan interface{}, cfg.CacherWorkersCount+1),
 		shutdownChan:     make(chan interface{}),
 		shutdownWaitChan: make(chan interface{}),
@@ -104,7 +107,7 @@ func (c *Cacher) Shutdown() {
 }
 
 func (c *Cacher) pushTasks() {
-	rssMap, err := c.db.GetItemsToCache()
+	rssMap, err := c.db.GetItemsToCache(c.batchSize)
 	if err != nil {
 		log.WithError(err).Error("failed to get items to cache")
 		return

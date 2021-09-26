@@ -21,6 +21,7 @@ type Config struct {
 
 	CacherWorkersCount int           `env:"RSS_CACHER_WORKERS_COUNT" envDefault:"4"`
 	CacherPullPeriod   time.Duration `env:"RSS_CACHER_PULL_PERIOD" envDefault:"5s"`
+	CacherBatchSize    int           `env:"RSS_CACHER_BATCH_SIZE" envDefault:"100"`
 }
 
 func Read() (*Config, error) {

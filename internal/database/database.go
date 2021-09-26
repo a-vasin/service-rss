@@ -25,13 +25,13 @@ type Rss struct {
 type Database interface {
 	Shutdown() error
 	CreateRss(*Rss) error
-	GetItemsToCache() (map[int64]*Rss, error)
+	GetItemsToCache(batchSize int) (map[int64]*Rss, error)
 	SaveCache(id int64, rssFeed string, validUntil time.Time) error
 }
 
 type database struct {
-	db       *sql.DB
-	hostname string
+	db        *sql.DB
+	serviceID string
 }
 
 func New(cfg *config.Config) (Database, error) {
@@ -53,9 +53,11 @@ func New(cfg *config.Config) (Database, error) {
 		return nil, err
 	}
 
+	serviceID := fmt.Sprintf("%s-%d", hostname, os.Getppid())
+
 	return &database{
-		db:       db,
-		hostname: hostname,
+		db:        db,
+		serviceID: serviceID,
 	}, nil
 }
 
@@ -76,8 +78,8 @@ func (db *database) CreateRss(rss *Rss) error {
 	return nil
 }
 
-func (db *database) GetItemsToCache() (map[int64]*Rss, error) {
-	ids, err := db.getNotLockedItems()
+func (db *database) GetItemsToCache(batchSize int) (map[int64]*Rss, error) {
+	ids, err := db.getNotLockedItems(batchSize)
 	if err != nil {
 		return nil, err
 	}
@@ -104,9 +106,9 @@ func (db *database) SaveCache(id int64, rssFeed string, validUntil time.Time) er
 	return nil
 }
 
-func (db *database) getNotLockedItems() ([]int64, error) {
-	query := "SELECT id FROM rss WHERE (not is_locked or locked_time < $1) and cached_valid_until < $2"
-	rows, err := db.db.Query(query, time.Now().Add(-lockTimeout), time.Now())
+func (db *database) getNotLockedItems(batchSize int) ([]int64, error) {
+	query := "SELECT id FROM rss WHERE (not is_locked or locked_time < $1) and cached_valid_until < $2 LIMIT $3"
+	rows, err := db.db.Query(query, time.Now().Add(-lockTimeout), time.Now(), batchSize)
 	if err != nil {
 		return nil, err
 	}
@@ -126,8 +128,8 @@ func (db *database) getNotLockedItems() ([]int64, error) {
 }
 
 func (db *database) lockItems(ids []int64) error {
-	query := "UPDATE rss SET is_locked=TRUE, locked_by=$1, locked_time=now() WHERE id in $2"
-	_, err := db.db.Exec(query, db.hostname, pq.Array(ids))
+	query := "UPDATE rss SET is_locked=TRUE, locked_by=$1, locked_time=now() WHERE (not is_locked or locked_time < $2) and id in $3"
+	_, err := db.db.Exec(query, db.serviceID, time.Now().Add(-lockTimeout), pq.Array(ids))
 	if err != nil {
 		return err
 	}
@@ -136,7 +138,7 @@ func (db *database) lockItems(ids []int64) error {
 
 func (db *database) getLockedItems(ids []int64) (map[int64]*Rss, error) {
 	query := "SELECT id, name, sources FROM rss WHERE is_locked and locked_by=$1 and id in $2"
-	rows, err := db.db.Query(query, db.hostname, pq.Array(ids))
+	rows, err := db.db.Query(query, db.serviceID, pq.Array(ids))
 	if err != nil {
 		return nil, err
 	}
