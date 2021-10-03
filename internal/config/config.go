@@ -20,8 +20,12 @@ type Config struct {
 	ServerWriteTimeout time.Duration `env:"RSS_SERVER_WRITE_TIMEOUT" envDefault:"5000ms"`
 
 	CacherWorkersCount int           `env:"RSS_CACHER_WORKERS_COUNT" envDefault:"4"`
-	CacherPullPeriod   time.Duration `env:"RSS_CACHER_PULL_PERIOD" envDefault:"5s"`
+	CacherPullPeriod   time.Duration `env:"RSS_CACHER_PULL_PERIOD" envDefault:"500ms"`
 	CacherBatchSize    int           `env:"RSS_CACHER_BATCH_SIZE" envDefault:"100"`
+
+	GoogleAuthClientID     string `env:"RSS_GOOGLE_AUTH_CLIENT_ID,required"`
+	GoogleAuthClientSecret string `env:"RSS_GOOGLE_AUTH_CLIENT_SECRET,required"`
+	GoogleAuthRedirectURL  string `env:"RSS_GOOGLE_AUTH_REDIRECT_URL" envDefault:"http://localhost/"`
 }
 
 func Read() (*Config, error) {

@@ -10,9 +10,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/xeipuuv/gojsonschema"
 
+	"service-rss/internal/auth"
 	"service-rss/internal/config"
 	"service-rss/internal/database"
 	"service-rss/internal/handlers"
+	"service-rss/internal/rss"
 )
 
 type Server struct {
@@ -20,7 +22,7 @@ type Server struct {
 	db     database.Database
 }
 
-func New(cfg *config.Config, db database.Database) (*Server, error) {
+func New(cfg *config.Config, db database.Database, aggregator rss.Aggregator) (*Server, error) {
 	router := chi.NewRouter()
 
 	router.Use(middleware.Logger)
@@ -32,8 +34,17 @@ func New(cfg *config.Config, db database.Database) (*Server, error) {
 		return nil, err
 	}
 
-	rssCreateHandler := handlers.NewRssCreateHandler(db, schema)
+	authHandler := auth.NewGoogleAuthHandler(cfg)
+	router.Get("/login", authHandler.Login)
+
+	rssCreateHandler := handlers.NewRssCreateHandler(db, schema, authHandler)
 	router.Post("/api/rss/create", rssCreateHandler.ServeHTTP)
+
+	indexHandler := handlers.NewIndexHandler(db, authHandler)
+	router.Get("/", indexHandler.ServeHTTP)
+
+	rssGetHandler := handlers.NewRssGetHandler(db, aggregator)
+	router.Get("/{email}/{name}", rssGetHandler.ServeHTTP)
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.ServerPort),

@@ -48,6 +48,21 @@ func (mr *MockDatabaseMockRecorder) CreateRss(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRss", reflect.TypeOf((*MockDatabase)(nil).CreateRss), arg0)
 }
 
+// GetCachedRss mocks base method.
+func (m *MockDatabase) GetCachedRss(email, name string) (*RssCached, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCachedRss", email, name)
+	ret0, _ := ret[0].(*RssCached)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCachedRss indicates an expected call of GetCachedRss.
+func (mr *MockDatabaseMockRecorder) GetCachedRss(email, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCachedRss", reflect.TypeOf((*MockDatabase)(nil).GetCachedRss), email, name)
+}
+
 // GetItemsToCache mocks base method.
 func (m *MockDatabase) GetItemsToCache(batchSize int) (map[int64]*Rss, error) {
 	m.ctrl.T.Helper()
@@ -63,18 +78,18 @@ func (mr *MockDatabaseMockRecorder) GetItemsToCache(batchSize interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItemsToCache", reflect.TypeOf((*MockDatabase)(nil).GetItemsToCache), batchSize)
 }
 
-// SaveCache mocks base method.
-func (m *MockDatabase) SaveCache(id int64, rssFeed string, validUntil time.Time) error {
+// SaveCachedRss mocks base method.
+func (m *MockDatabase) SaveCachedRss(id int64, rssFeed string, validUntil time.Time) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveCache", id, rssFeed, validUntil)
+	ret := m.ctrl.Call(m, "SaveCachedRss", id, rssFeed, validUntil)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// SaveCache indicates an expected call of SaveCache.
-func (mr *MockDatabaseMockRecorder) SaveCache(id, rssFeed, validUntil interface{}) *gomock.Call {
+// SaveCachedRss indicates an expected call of SaveCachedRss.
+func (mr *MockDatabaseMockRecorder) SaveCachedRss(id, rssFeed, validUntil interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveCache", reflect.TypeOf((*MockDatabase)(nil).SaveCache), id, rssFeed, validUntil)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveCachedRss", reflect.TypeOf((*MockDatabase)(nil).SaveCachedRss), id, rssFeed, validUntil)
 }
 
 // Shutdown mocks base method.

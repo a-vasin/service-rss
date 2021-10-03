@@ -134,8 +134,10 @@ func (c *Cacher) processTask(rss *rssWithID) {
 
 	validUntil := time.Now().Add(time.Duration(rssFeed.Channel.Ttl) * time.Minute)
 
-	err = c.db.SaveCache(rss.id, string(rssFeedRaw), validUntil)
+	err = c.db.SaveCachedRss(rss.id, string(rssFeedRaw), validUntil)
 	if err != nil {
 		log.WithError(err).Error("failed to save cached rss feed")
 	}
+
+	log.WithField("name", rss.rss.Name).WithField("email", rss.rss.Email).Info("rss was processed")
 }

@@ -10,9 +10,11 @@ import (
 
 var (
 	configValues = map[string]string{
-		"RSS_DB_HOST":       "host",
-		"RSS_DB_PORT":       "5444",
-		"RSS_DB_ENABLE_SSL": "true",
+		"RSS_DB_HOST":                   "host",
+		"RSS_DB_PORT":                   "5444",
+		"RSS_DB_ENABLE_SSL":             "true",
+		"RSS_GOOGLE_AUTH_CLIENT_ID":     "clientID",
+		"RSS_GOOGLE_AUTH_CLIENT_SECRET": "secret",
 	}
 )
 

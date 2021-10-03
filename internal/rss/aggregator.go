@@ -42,7 +42,11 @@ func (b *aggregator) Aggregate(rss *database.Rss) *dto.RssFeed {
 		feed, err := b.fetcher.Fetch(rssUrl)
 		if err != nil {
 			ttl = defaultTtl
-			log.WithError(err).WithField("url", rssUrl).WithField("name", rss.Name).Warn("failed to get rss feed")
+			log.WithError(err).
+				WithField("url", rssUrl).
+				WithField("name", rss.Name).
+				WithField("email", rss.Email).
+				Warn("failed to get rss feed")
 			continue
 		}
 

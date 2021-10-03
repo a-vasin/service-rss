@@ -25,6 +25,7 @@ func (f *fetcher) Fetch(url string) (*dto.RssFeed, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	feed := &dto.RssFeed{}
 	err = xml.NewDecoder(resp.Body).Decode(feed)

@@ -18,15 +18,22 @@ var (
 )
 
 type Rss struct {
+	Email   string
 	Name    string
 	Sources []string
+}
+
+type RssCached struct {
+	Rss
+	RssFeed string
 }
 
 type Database interface {
 	Shutdown() error
 	CreateRss(*Rss) error
 	GetItemsToCache(batchSize int) (map[int64]*Rss, error)
-	SaveCache(id int64, rssFeed string, validUntil time.Time) error
+	SaveCachedRss(id int64, rssFeed string, validUntil time.Time) error
+	GetCachedRss(email string, name string) (*RssCached, error)
 }
 
 type database struct {
@@ -70,8 +77,8 @@ func (db *database) CreateRss(rss *Rss) error {
 		return errors.New("empty rss")
 	}
 
-	query := "INSERT INTO rss (name, sources, cached_valid_until) VALUES ($1, $2, $3)"
-	_, err := db.db.Exec(query, rss.Name, pq.Array(rss.Sources), time.Unix(0, 0))
+	query := "INSERT INTO rss (email, name, sources, cached_valid_until) VALUES ($1, $2, $3, $4)"
+	_, err := db.db.Exec(query, rss.Email, rss.Name, pq.Array(rss.Sources), time.Unix(0, 0))
 	if err != nil {
 		return err
 	}
@@ -103,7 +110,7 @@ func (db *database) GetItemsToCache(batchSize int) (map[int64]*Rss, error) {
 	return items, nil
 }
 
-func (db *database) SaveCache(id int64, rssFeed string, validUntil time.Time) error {
+func (db *database) SaveCachedRss(id int64, rssFeed string, validUntil time.Time) error {
 	query := "UPDATE rss SET is_locked=FALSE, cached_rss=$1, cached_valid_until=$2 WHERE id=$3"
 	_, err := db.db.Exec(query, rssFeed, validUntil, id)
 	if err != nil {
@@ -143,7 +150,7 @@ func (db *database) lockItems(ids []int64, now time.Time) error {
 }
 
 func (db *database) getLockedItems(ids []int64) (map[int64]*Rss, error) {
-	query := "SELECT id, name, sources FROM rss WHERE is_locked and locked_by=$1 and id=any($2)"
+	query := "SELECT id, email, name, sources FROM rss WHERE is_locked and locked_by=$1 and id=any($2)"
 	rows, err := db.db.Query(query, db.serviceID, pq.Array(ids))
 	if err != nil {
 		return nil, err
@@ -155,11 +162,32 @@ func (db *database) getLockedItems(ids []int64) (map[int64]*Rss, error) {
 	for rows.Next() {
 		var id int64
 		item := &Rss{}
-		if err = rows.Scan(&id, &item.Name, pq.Array(&item.Sources)); err != nil {
+		if err = rows.Scan(&id, &item.Email, &item.Name, pq.Array(&item.Sources)); err != nil {
 			return nil, err
 		}
 		items[id] = item
 	}
 
 	return items, nil
+}
+
+func (db *database) GetCachedRss(email string, name string) (*RssCached, error) {
+	query := "SELECT sources, cached_rss FROM rss WHERE email=$1 and name=$2"
+	row := db.db.QueryRow(query, email, name)
+
+	var rssFeed string
+	var sources []string
+	err := row.Scan(pq.Array(&sources), &rssFeed)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RssCached{
+		Rss: Rss{
+			Email:   email,
+			Name:    name,
+			Sources: sources,
+		},
+		RssFeed: rssFeed,
+	}, nil
 }

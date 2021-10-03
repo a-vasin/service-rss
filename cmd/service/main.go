@@ -26,10 +26,10 @@ func main() {
 	fetcher := rss.NewFetcher()
 	aggregator := rss.NewAggregator(fetcher)
 	cacher := rss.NewCacher(cfg, db, aggregator)
-	cacher.Start()
+	go cacher.Start()
 	defer cacher.Shutdown()
 
-	srv, err := server.New(cfg, db)
+	srv, err := server.New(cfg, db, aggregator)
 	if err != nil {
 		log.WithError(err).Fatal("failed to init server")
 	}

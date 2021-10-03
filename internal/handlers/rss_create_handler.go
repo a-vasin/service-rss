@@ -8,26 +8,35 @@ import (
 	"strings"
 
 	"github.com/asaskevich/govalidator"
-	log "github.com/sirupsen/logrus"
+	"github.com/lib/pq"
 	"github.com/xeipuuv/gojsonschema"
 
+	"service-rss/internal/auth"
 	"service-rss/internal/database"
 	"service-rss/internal/dto"
 )
 
 type rssCreateHandler struct {
-	db     database.Database
-	schema *gojsonschema.Schema
+	db          database.Database
+	schema      *gojsonschema.Schema
+	authHandler auth.Handler
 }
 
-func NewRssCreateHandler(db database.Database, schema *gojsonschema.Schema) http.Handler {
+func NewRssCreateHandler(db database.Database, schema *gojsonschema.Schema, authHandler auth.Handler) http.Handler {
 	return &rssCreateHandler{
-		db:     db,
-		schema: schema,
+		db:          db,
+		schema:      schema,
+		authHandler: authHandler,
 	}
 }
 
 func (h *rssCreateHandler) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
+	email, err := h.authHandler.GetEmail(writer, req)
+	if err != nil {
+		writeBadRequest(writer, "failed to get email", err.Error())
+		return
+	}
+
 	bodyBytes, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		writeBadRequest(writer, "failed to read request body", "")
@@ -74,51 +83,20 @@ func (h *rssCreateHandler) ServeHTTP(writer http.ResponseWriter, req *http.Reque
 	}
 
 	rss := &database.Rss{
+		Email:   email,
 		Name:    in.Name,
 		Sources: in.Sources,
 	}
 	err = h.db.CreateRss(rss)
 	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Constraint == "rss_email_name_key" {
+			writeBadRequest(writer, "rss already exists", rss.Name)
+			return
+		}
+
 		writeInternalError(writer, "failed to create rss", err)
 		return
 	}
 
 	writer.WriteHeader(http.StatusOK)
-}
-
-func writeErrorResponse(writer http.ResponseWriter, status int, resp *dto.ErrorResponse) {
-	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
-
-	writer.WriteHeader(status)
-
-	response, err := json.Marshal(resp)
-	if err != nil {
-		log.WithError(err).Error("failed to serialize error response")
-	}
-
-	_, err = writer.Write(response)
-	if err != nil {
-		log.WithError(err).Warn("failed to write response")
-	}
-}
-
-func writeBadRequest(writer http.ResponseWriter, responseErr string, value string) {
-	log.WithField("value", value).Warn(responseErr)
-
-	resp := &dto.ErrorResponse{
-		Error: responseErr,
-		Value: value,
-	}
-
-	writeErrorResponse(writer, http.StatusBadRequest, resp)
-}
-
-func writeInternalError(writer http.ResponseWriter, responseErr string, err error) {
-	log.WithError(err).Error(responseErr)
-
-	resp := &dto.ErrorResponse{
-		Error: responseErr,
-	}
-
-	writeErrorResponse(writer, http.StatusInternalServerError, resp)
 }

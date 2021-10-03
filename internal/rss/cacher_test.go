@@ -113,7 +113,7 @@ func TestCacher_ProcessTask(t *testing.T) {
 	aggregator := NewAggregator(fetcher)
 
 	db := database.NewMockDatabase(ctrl)
-	db.EXPECT().SaveCache(gomock.Any(), gomock.Any(), gomock.Any()).Do(func(id int64, rssFeed string, validUntil time.Time) {
+	db.EXPECT().SaveCachedRss(gomock.Any(), gomock.Any(), gomock.Any()).Do(func(id int64, rssFeed string, validUntil time.Time) {
 		assert.Equal(t, int64(1), id)
 		assert.True(t, strings.HasPrefix(rssFeed, "<rss><channel><title>RSS Aggregator</title><link></link><description>Aggregated feed from different rss sources.</description><lastBuildDate>"))
 		assert.True(t, strings.HasSuffix(rssFeed, "</lastBuildDate><ttl>5</ttl></channel></rss>"))
