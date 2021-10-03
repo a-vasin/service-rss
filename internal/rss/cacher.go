@@ -83,13 +83,15 @@ func (c *Cacher) Start() {
 			defer close(first)
 			first <- nil
 
-			select {
-			case <-first:
-				c.initChan <- nil
-			case <-c.shutdownChan:
-				return
-			case rss := <-c.rssChan:
-				c.processTask(rss)
+			for {
+				select {
+				case <-first:
+					c.initChan <- nil
+				case <-c.shutdownChan:
+					return
+				case rss := <-c.rssChan:
+					c.processTask(rss)
+				}
 			}
 		}()
 	}
