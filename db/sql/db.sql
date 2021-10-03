@@ -7,7 +7,7 @@ create table rss
     cached_rss         text,
     cached_valid_until timestamp,
 
-    is_locked          bool,
+    is_locked          bool default false,
     locked_by          text,
     locked_time        timestamp
 );

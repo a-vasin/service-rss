@@ -79,12 +79,18 @@ func (db *database) CreateRss(rss *Rss) error {
 }
 
 func (db *database) GetItemsToCache(batchSize int) (map[int64]*Rss, error) {
-	ids, err := db.getNotLockedItems(batchSize)
+	now := time.Now()
+
+	ids, err := db.getNotLockedItems(batchSize, now)
 	if err != nil {
 		return nil, err
 	}
 
-	err = db.lockItems(ids)
+	if len(ids) == 0 {
+		return map[int64]*Rss{}, nil
+	}
+
+	err = db.lockItems(ids, now)
 	if err != nil {
 		return nil, err
 	}
@@ -106,9 +112,9 @@ func (db *database) SaveCache(id int64, rssFeed string, validUntil time.Time) er
 	return nil
 }
 
-func (db *database) getNotLockedItems(batchSize int) ([]int64, error) {
+func (db *database) getNotLockedItems(batchSize int, now time.Time) ([]int64, error) {
 	query := "SELECT id FROM rss WHERE (not is_locked or locked_time < $1) and cached_valid_until < $2 LIMIT $3"
-	rows, err := db.db.Query(query, time.Now().Add(-lockTimeout), time.Now(), batchSize)
+	rows, err := db.db.Query(query, now.Add(-lockTimeout), now, batchSize)
 	if err != nil {
 		return nil, err
 	}
@@ -127,9 +133,9 @@ func (db *database) getNotLockedItems(batchSize int) ([]int64, error) {
 	return ids, nil
 }
 
-func (db *database) lockItems(ids []int64) error {
-	query := "UPDATE rss SET is_locked=TRUE, locked_by=$1, locked_time=now() WHERE (not is_locked or locked_time < $2) and id in $3"
-	_, err := db.db.Exec(query, db.serviceID, time.Now().Add(-lockTimeout), pq.Array(ids))
+func (db *database) lockItems(ids []int64, now time.Time) error {
+	query := "UPDATE rss SET is_locked=TRUE, locked_by=$1, locked_time=$2 WHERE (not is_locked or locked_time < $3) and id=any($4)"
+	_, err := db.db.Exec(query, db.serviceID, now, now.Add(-lockTimeout), pq.Array(ids))
 	if err != nil {
 		return err
 	}
@@ -137,7 +143,7 @@ func (db *database) lockItems(ids []int64) error {
 }
 
 func (db *database) getLockedItems(ids []int64) (map[int64]*Rss, error) {
-	query := "SELECT id, name, sources FROM rss WHERE is_locked and locked_by=$1 and id in $2"
+	query := "SELECT id, name, sources FROM rss WHERE is_locked and locked_by=$1 and id=any($2)"
 	rows, err := db.db.Query(query, db.serviceID, pq.Array(ids))
 	if err != nil {
 		return nil, err
