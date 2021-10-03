@@ -16,5 +16,4 @@ func NewHandler() Handler {
 
 func (t Handler) Wait() {
 	<-t
-	return
 }
