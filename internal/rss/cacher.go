@@ -24,8 +24,7 @@ type Cacher struct {
 	pullPeriod   time.Duration
 	batchSize    int
 
-	// graceful shutdown helper channels
-	initChan         chan interface{}
+	// graceful shutdown helper-channels
 	shutdownChan     chan interface{}
 	shutdownWaitChan chan interface{}
 }
@@ -39,7 +38,6 @@ func NewCacher(cfg *config.Config, db database.Database, aggregator Aggregator) 
 		pullPeriod:   cfg.CacherPullPeriod,
 		batchSize:    cfg.CacherBatchSize,
 
-		initChan:         make(chan interface{}, cfg.CacherWorkersCount+1),
 		shutdownChan:     make(chan interface{}),
 		shutdownWaitChan: make(chan interface{}),
 	}
@@ -62,7 +60,6 @@ func (c *Cacher) Start() {
 			select {
 			// pushTasks at the start
 			case <-first:
-				c.initChan <- nil
 				c.pushTasks()
 			case <-c.shutdownChan:
 				return
@@ -79,14 +76,8 @@ func (c *Cacher) Start() {
 		go func() {
 			defer wg.Done()
 
-			first := make(chan interface{}, 1)
-			defer close(first)
-			first <- nil
-
 			for {
 				select {
-				case <-first:
-					c.initChan <- nil
 				case <-c.shutdownChan:
 					return
 				case rss := <-c.rssChan:
@@ -100,10 +91,6 @@ func (c *Cacher) Start() {
 }
 
 func (c *Cacher) Shutdown() {
-	// wait for task pusher + workers start
-	for i := 0; i < c.workersCount+1; i++ {
-		<-c.initChan
-	}
 	close(c.shutdownChan)
 	<-c.shutdownWaitChan
 }

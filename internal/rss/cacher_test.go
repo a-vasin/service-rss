@@ -18,6 +18,7 @@ func TestCacher_Shutdown(t *testing.T) {
 	defer ctrl.Finish()
 
 	fetcher := NewMockFetcher(ctrl)
+	fetcher.EXPECT().Fetch(gomock.Any()).AnyTimes().Return(nil, nil)
 	aggregator := NewAggregator(fetcher)
 
 	db := database.NewMockDatabase(ctrl)
