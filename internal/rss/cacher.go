@@ -9,17 +9,14 @@ import (
 
 	"service-rss/internal/config"
 	"service-rss/internal/database"
+	"service-rss/internal/dto"
+	"service-rss/internal/safe"
 )
-
-type rssWithID struct {
-	id  int64
-	rss *database.Rss
-}
 
 type Cacher struct {
 	db           database.Database
 	aggregator   Aggregator
-	rssChan      chan *rssWithID
+	rssChan      chan *database.Rss
 	workersCount int
 	pullPeriod   time.Duration
 	batchSize    int
@@ -33,7 +30,7 @@ func NewCacher(cfg *config.Config, db database.Database, aggregator Aggregator) 
 	return &Cacher{
 		db:           db,
 		aggregator:   aggregator,
-		rssChan:      make(chan *rssWithID, cfg.CacherWorkersCount),
+		rssChan:      make(chan *database.Rss, cfg.CacherWorkersCount),
 		workersCount: cfg.CacherWorkersCount,
 		pullPeriod:   cfg.CacherPullPeriod,
 		batchSize:    cfg.CacherBatchSize,
@@ -49,7 +46,7 @@ func (c *Cacher) Start() {
 	ticker := time.NewTicker(c.pullPeriod)
 
 	// push tasks
-	go func() {
+	go safe.Do(func() {
 		defer close(c.rssChan)
 
 		first := make(chan interface{}, 1)
@@ -67,13 +64,13 @@ func (c *Cacher) Start() {
 				c.pushTasks()
 			}
 		}
-	}()
+	})
 
 	// process tasks
 	wg := sync.WaitGroup{}
 	for i := 0; i < c.workersCount; i++ {
 		wg.Add(1)
-		go func() {
+		go safe.Do(func() {
 			defer wg.Done()
 
 			for {
@@ -84,7 +81,7 @@ func (c *Cacher) Start() {
 					c.processTask(rss)
 				}
 			}
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -96,22 +93,19 @@ func (c *Cacher) Shutdown() {
 }
 
 func (c *Cacher) pushTasks() {
-	rssMap, err := c.db.GetItemsToCache(c.batchSize)
+	rssSlice, err := c.db.GetItemsToCache(c.batchSize)
 	if err != nil {
 		log.WithError(err).Error("failed to get items to cache")
 		return
 	}
 
-	for id, rss := range rssMap {
-		c.rssChan <- &rssWithID{
-			id:  id,
-			rss: rss,
-		}
+	for _, rss := range rssSlice {
+		c.rssChan <- rss
 	}
 }
 
-func (c *Cacher) processTask(rss *rssWithID) {
-	rssFeed := c.aggregator.Aggregate(rss.rss)
+func (c *Cacher) processTask(rss *database.Rss) {
+	rssFeed := c.aggregator.Aggregate(rss)
 
 	rssFeedRaw, err := xml.Marshal(rssFeed)
 	if err != nil {
@@ -119,12 +113,16 @@ func (c *Cacher) processTask(rss *rssWithID) {
 		return
 	}
 
-	validUntil := time.Now().Add(time.Duration(rssFeed.Channel.Ttl) * time.Minute)
+	validUntil := GetValidUntil(rssFeed)
 
-	err = c.db.SaveCachedRss(rss.id, string(rssFeedRaw), validUntil)
+	err = c.db.SaveCachedRss(rss.ID, string(rssFeedRaw), validUntil)
 	if err != nil {
 		log.WithError(err).Error("failed to save cached rss feed")
 	}
 
-	log.WithField("name", rss.rss.Name).WithField("email", rss.rss.Email).Info("rss was processed")
+	log.WithField("name", rss.Name).WithField("email", rss.Email).Info("rss was processed")
+}
+
+func GetValidUntil(rssFeed *dto.RssFeed) time.Time {
+	return time.Now().Add(time.Duration(rssFeed.Channel.Ttl) * time.Minute)
 }

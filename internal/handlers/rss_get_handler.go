@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
+	log "github.com/sirupsen/logrus"
 
 	"service-rss/internal/database"
 	"service-rss/internal/rss"
@@ -37,7 +38,7 @@ func (h *rssGetHandler) ServeHTTP(writer http.ResponseWriter, req *http.Request)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			msg := fmt.Sprintf("email: %s, name: %s", email, name)
-			writeBadRequest(writer, "rss feed was not found", msg)
+			writeNotFound(writer, "rss feed was not found", msg)
 			return
 		}
 
@@ -54,6 +55,12 @@ func (h *rssGetHandler) ServeHTTP(writer http.ResponseWriter, req *http.Request)
 		if err != nil {
 			writeInternalError(writer, "failed to marshal rss feed", err)
 			return
+		}
+
+		validUntil := rss.GetValidUntil(rssFeed)
+		err = h.db.SaveCachedRss(rssCached.Rss.ID, string(rssFeedString), validUntil)
+		if err != nil {
+			log.WithError(err).Error("failed to save cached rss feed")
 		}
 	}
 

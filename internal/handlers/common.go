@@ -46,3 +46,14 @@ func writeInternalError(writer http.ResponseWriter, responseErr string, err erro
 
 	writeErrorResponse(writer, http.StatusInternalServerError, resp)
 }
+
+func writeNotFound(writer http.ResponseWriter, responseErr string, value string) {
+	log.WithField("value", value).Warn(responseErr)
+
+	resp := &dto.ErrorResponse{
+		Error: responseErr,
+		Value: value,
+	}
+
+	writeErrorResponse(writer, http.StatusNotFound, resp)
+}

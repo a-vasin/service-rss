@@ -27,6 +27,7 @@ func TestRssGetHandler_ServeHTTP(t *testing.T) {
 	db.EXPECT().GetCachedRss(gomock.Any(), "error").Return(nil, errors.New("error"))
 	db.EXPECT().GetCachedRss(gomock.Any(), "empty").Return(&database.RssCached{}, nil)
 	db.EXPECT().GetCachedRss(gomock.Any(), "ok").Return(&database.RssCached{RssFeed: "ok"}, nil)
+	db.EXPECT().SaveCachedRss(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	fetcher := rss.NewMockFetcher(ctrl)
 	fetcher.EXPECT().Fetch(gomock.Any()).AnyTimes().Return(nil, nil)
@@ -59,7 +60,7 @@ func TestRssGetHandler_ServeHTTP(t *testing.T) {
 		rr := httptest.NewRecorder()
 		defaultHandler.ServeHTTP(rr, req)
 
-		assert.Equal(t, 400, rr.Code)
+		assert.Equal(t, 404, rr.Code)
 		assert.Equal(t, "application/json; charset=utf-8", rr.Header().Get("Content-Type"))
 		assert.Contains(t, rr.Body.String(), "rss feed was not foun")
 	})

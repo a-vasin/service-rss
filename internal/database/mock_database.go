@@ -64,10 +64,10 @@ func (mr *MockDatabaseMockRecorder) GetCachedRss(email, name interface{}) *gomoc
 }
 
 // GetItemsToCache mocks base method.
-func (m *MockDatabase) GetItemsToCache(batchSize int) (map[int64]*Rss, error) {
+func (m *MockDatabase) GetItemsToCache(batchSize int) ([]*Rss, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetItemsToCache", batchSize)
-	ret0, _ := ret[0].(map[int64]*Rss)
+	ret0, _ := ret[0].([]*Rss)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

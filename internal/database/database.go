@@ -18,6 +18,7 @@ var (
 )
 
 type Rss struct {
+	ID      int64
 	Email   string
 	Name    string
 	Sources []string
@@ -31,7 +32,7 @@ type RssCached struct {
 type Database interface {
 	Shutdown() error
 	CreateRss(*Rss) error
-	GetItemsToCache(batchSize int) (map[int64]*Rss, error)
+	GetItemsToCache(batchSize int) ([]*Rss, error)
 	SaveCachedRss(id int64, rssFeed string, validUntil time.Time) error
 	GetCachedRss(email string, name string) (*RssCached, error)
 }
@@ -85,7 +86,7 @@ func (db *database) CreateRss(rss *Rss) error {
 	return nil
 }
 
-func (db *database) GetItemsToCache(batchSize int) (map[int64]*Rss, error) {
+func (db *database) GetItemsToCache(batchSize int) ([]*Rss, error) {
 	now := time.Now()
 
 	ids, err := db.getNotLockedItems(batchSize, now)
@@ -94,7 +95,7 @@ func (db *database) GetItemsToCache(batchSize int) (map[int64]*Rss, error) {
 	}
 
 	if len(ids) == 0 {
-		return map[int64]*Rss{}, nil
+		return []*Rss{}, nil
 	}
 
 	err = db.lockItems(ids, now)
@@ -149,7 +150,7 @@ func (db *database) lockItems(ids []int64, now time.Time) error {
 	return nil
 }
 
-func (db *database) getLockedItems(ids []int64) (map[int64]*Rss, error) {
+func (db *database) getLockedItems(ids []int64) ([]*Rss, error) {
 	query := "SELECT id, email, name, sources FROM rss WHERE is_locked and locked_by=$1 and id=any($2)"
 	rows, err := db.db.Query(query, db.serviceID, pq.Array(ids))
 	if err != nil {
@@ -158,14 +159,13 @@ func (db *database) getLockedItems(ids []int64) (map[int64]*Rss, error) {
 
 	defer rows.Close()
 
-	items := make(map[int64]*Rss, len(ids))
+	items := make([]*Rss, 0, len(ids))
 	for rows.Next() {
-		var id int64
 		item := &Rss{}
-		if err = rows.Scan(&id, &item.Email, &item.Name, pq.Array(&item.Sources)); err != nil {
+		if err = rows.Scan(&item.ID, &item.Email, &item.Name, pq.Array(&item.Sources)); err != nil {
 			return nil, err
 		}
-		items[id] = item
+		items = append(items, item)
 	}
 
 	return items, nil

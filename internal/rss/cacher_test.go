@@ -52,26 +52,28 @@ func TestCacher_PushTasks(t *testing.T) {
 	defer ctrl.Finish()
 
 	db := database.NewMockDatabase(ctrl)
-	db.EXPECT().GetItemsToCache(gomock.Any()).AnyTimes().Return(map[int64]*database.Rss{
-		1: {
+	db.EXPECT().GetItemsToCache(gomock.Any()).AnyTimes().Return([]*database.Rss{
+		{
+			ID:   1,
 			Name: "first",
 		},
-		2: {
+		{
+			ID:   2,
 			Name: "second",
 		},
 	}, nil)
 
 	h := &Cacher{
 		db:      db,
-		rssChan: make(chan *rssWithID, 2),
+		rssChan: make(chan *database.Rss, 2),
 	}
 
 	timeout := time.After(1 * time.Second)
-	resultChan := make(chan []*rssWithID)
+	resultChan := make(chan []*database.Rss)
 	go func() {
 		h.pushTasks()
 
-		result := make([]*rssWithID, 0, 2)
+		result := make([]*database.Rss, 0, 2)
 		for i := 0; i < 2; i++ {
 			rss := <-h.rssChan
 			result = append(result, rss)
@@ -80,18 +82,14 @@ func TestCacher_PushTasks(t *testing.T) {
 		resultChan <- result
 	}()
 
-	expected := []*rssWithID{
+	expected := []*database.Rss{
 		{
-			id: 1,
-			rss: &database.Rss{
-				Name: "first",
-			},
+			ID:   1,
+			Name: "first",
 		},
 		{
-			id: 2,
-			rss: &database.Rss{
-				Name: "second",
-			},
+			ID:   2,
+			Name: "second",
 		},
 	}
 
@@ -100,7 +98,7 @@ func TestCacher_PushTasks(t *testing.T) {
 		t.Fatal("test didn't finish in time")
 	case actual := <-resultChan:
 		sort.Slice(actual, func(i, j int) bool {
-			return actual[i].id < actual[j].id
+			return actual[i].ID < actual[j].ID
 		})
 		assert.Equal(t, expected, actual)
 	}
@@ -126,11 +124,9 @@ func TestCacher_ProcessTask(t *testing.T) {
 		aggregator: aggregator,
 	}
 
-	rss := &rssWithID{
-		id: 1,
-		rss: &database.Rss{
-			Name: "name",
-		},
+	rss := &database.Rss{
+		ID:   1,
+		Name: "name",
 	}
 	h.processTask(rss)
 }
