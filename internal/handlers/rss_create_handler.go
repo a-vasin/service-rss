@@ -32,7 +32,7 @@ func NewRssCreateHandler(db database.Database, schema *gojsonschema.Schema, auth
 
 func (h *rssCreateHandler) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
 	email, err := h.authHandler.GetEmail(writer, req)
-	if err != nil {
+	if err != nil || len(email) == 0 {
 		writeBadRequest(writer, "failed to get email", err.Error())
 		return
 	}

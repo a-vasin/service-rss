@@ -2,11 +2,9 @@ package auth
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
@@ -73,7 +71,7 @@ func (h *googleAuthHandler) GetEmail(w http.ResponseWriter, r *http.Request) (st
 	if len(accessToken) == 0 {
 		code := r.FormValue("code")
 		if len(code) == 0 {
-			return "", errors.New("code form value was not found")
+			return "", nil
 		}
 
 		token, err := h.oauthConf.Exchange(r.Context(), code)
@@ -87,7 +85,7 @@ func (h *googleAuthHandler) GetEmail(w http.ResponseWriter, r *http.Request) (st
 		cookie := http.Cookie{
 			Name:    tokenCookieName,
 			Value:   accessToken,
-			Expires: time.Now().Add(365 * 24 * time.Hour),
+			Expires: token.Expiry,
 		}
 		http.SetCookie(w, &cookie)
 	}

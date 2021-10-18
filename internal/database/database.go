@@ -35,6 +35,7 @@ type Database interface {
 	GetItemsToCache(batchSize int) ([]*Rss, error)
 	SaveCachedRss(id int64, rssFeed string, validUntil time.Time) error
 	GetCachedRss(email string, name string) (*RssCached, error)
+	GetRssForIndex() ([]*Rss, error)
 }
 
 type database struct {
@@ -190,4 +191,25 @@ func (db *database) GetCachedRss(email string, name string) (*RssCached, error) 
 		},
 		RssFeed: rssFeed,
 	}, nil
+}
+
+func (db *database) GetRssForIndex() ([]*Rss, error) {
+	query := "SELECT id, email, name, sources FROM rss ORDER BY added_time desc"
+	rows, err := db.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	items := make([]*Rss, 0)
+	for rows.Next() {
+		item := &Rss{}
+		if err = rows.Scan(&item.ID, &item.Email, &item.Name, pq.Array(&item.Sources)); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+
+	return items, nil
 }

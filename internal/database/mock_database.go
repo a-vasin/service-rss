@@ -78,6 +78,21 @@ func (mr *MockDatabaseMockRecorder) GetItemsToCache(batchSize interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItemsToCache", reflect.TypeOf((*MockDatabase)(nil).GetItemsToCache), batchSize)
 }
 
+// GetRssForIndex mocks base method.
+func (m *MockDatabase) GetRssForIndex() ([]*Rss, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRssForIndex")
+	ret0, _ := ret[0].([]*Rss)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRssForIndex indicates an expected call of GetRssForIndex.
+func (mr *MockDatabaseMockRecorder) GetRssForIndex() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRssForIndex", reflect.TypeOf((*MockDatabase)(nil).GetRssForIndex))
+}
+
 // SaveCachedRss mocks base method.
 func (m *MockDatabase) SaveCachedRss(id int64, rssFeed string, validUntil time.Time) error {
 	m.ctrl.T.Helper()

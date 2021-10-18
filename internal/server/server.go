@@ -40,7 +40,10 @@ func New(cfg *config.Config, db database.Database, aggregator rss.Aggregator) (*
 	rssCreateHandler := handlers.NewRssCreateHandler(db, schema, authHandler)
 	router.Post("/api/rss/create", rssCreateHandler.ServeHTTP)
 
-	indexHandler := handlers.NewIndexHandler(db, authHandler)
+	indexHandler, err := handlers.NewIndexHandler(db, authHandler)
+	if err != nil {
+		return nil, err
+	}
 	router.Get("/", indexHandler.ServeHTTP)
 
 	rssGetHandler := handlers.NewRssGetHandler(db, aggregator)

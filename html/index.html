@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>RSS Aggregator</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        .card-title-font {
+            color: #444444;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .action-anchor {
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .rssRow {
+            background: transparent url('https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Feed-icon.svg/128px-Feed-icon.svg.png') no-repeat scroll 0;
+            background-size: 18px;
+            padding-left: 24px;
+        }
+    </style>
+
+</head>
+
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand">RSS Aggregator</a>
+    {{if eq .Email ""}}
+    <div class="ml-auto">
+        <a aria-pressed="true" class="btn btn-outline-secondary action-anchor" href="/login" role="button">
+            Log In
+        </a>
+    </div>
+    {{else}}
+    <div class="ml-auto">
+        <a>{{.Email}}</a>
+        <button aria-pressed="true" class="btn btn-outline-secondary action-anchor" id="log-out-button">
+            Log Out
+        </button>
+    </div>
+    {{end}}
+</nav>
+
+<div class="container col-md-6">
+    {{if ne .Email ""}}
+    <div>
+        <button class="btn btn-outline-secondary action-anchor" data-target="#createRssModal" data-toggle="modal"
+                type="button">
+            Create Rss
+        </button>
+    </div>
+    {{end}}
+
+    {{range .RssFeeds}}
+    <div class="card bg-light my-3">
+        <div class="card-header container py-1">
+            <div class="row">
+                <div class="col-auto">
+                    <a href="/{{.Email}}/{{.Name}}">
+                      <span class="card-title-font rssRow" id="snapshot-name">
+                           {{.Name}} (Author: {{.Email}})
+                      </span>
+                    </a>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="card-body p-2 px-3">
+            <p class="card-text">
+                <small class="text-muted mr-3">
+                    {{range .Sources}}
+                    {{.}}
+                    <br>
+                    {{end}}
+                </small>
+            </p>
+        </div>
+    </div>
+    {{end}}
+</div>
+
+<div aria-hidden="true" aria-labelledby="createRssModalLabel" class="modal fade" id="createRssModal" role="dialog"
+     tabindex="-1">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createRssModalLabel">Create RSS</h5>
+                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="form-group">
+                        <label class="col-form-label" for="rss-name">Name</label>
+                        <input class="form-control" id="rss-name" type="text">
+                    </div>
+                    <div class="form-group">
+                        <label class="col-form-label" for="rss-urls">URLs</label>
+                        <textarea class="form-control" id="rss-urls"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-dismiss="modal" type="button">Cancel</button>
+                <button class="btn btn-primary" type="button">Create</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+<script>
+    $('#createRssModal').on('show.bs.modal', function (event) {
+        var card = $(event.relatedTarget).closest('.card');
+        var modal = $(this);
+
+        modal.find('#snapshot-name').val(card.find('#rss-name').text().trim());
+        modal.find('#snapshot-descr').val(card.find('#rss-urls').text().trim());
+
+        modal.find('.btn-primary').on('click', function () {
+
+            var url = "/api/rss/create";
+
+            var data = {
+                "name": modal.find('#rss-name').val().trim(),
+                "sources": modal.find('#rss-urls').val().trim().split("\n")
+            };
+
+            $.ajax({
+                type: "POST",
+                url: url,
+                data: JSON.stringify(data),
+                processData: false,
+                contentType: 'application/json',
+                success: function () {
+                    modal.modal('hide');
+                    window.location.reload()
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    alert("HTTP " + jqXHR.status + " " + jqXHR.statusText + " : " + jqXHR.responseText)
+                }
+            });
+        });
+    });
+
+    var delete_cookie = function (name) {
+        document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    };
+
+    $('#log-out-button').on('click', function (event) {
+        delete_cookie('rsstoken');
+        window.location.reload();
+    });
+
+    // remove auth data from url
+    window.history.pushState({}, document.title, "/");
+</script>
+
+</body>
+</html>
+
