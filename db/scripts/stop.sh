@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
-docker stop "rss"
-docker rm "rss"
+docker stop "rss-db"
+docker rm "rss-db"

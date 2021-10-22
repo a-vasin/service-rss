@@ -69,3 +69,6 @@ run-local-db:
 
 stop-local-db:
 	./db/scripts/stop.sh
+
+build-docker:
+	docker build --tag service-rss .
