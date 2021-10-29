@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"service-rss/internal/config"
 )
@@ -41,6 +42,7 @@ type Database interface {
 type database struct {
 	db        *sql.DB
 	serviceID string
+	histogram *prometheus.HistogramVec
 }
 
 func New(cfg *config.Config) (Database, error) {
@@ -64,9 +66,21 @@ func New(cfg *config.Config) (Database, error) {
 
 	serviceID := fmt.Sprintf("%s-%d", hostname, os.Getppid())
 
+	histogram := prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "database_duration_seconds",
+		Help:    "Histogram of database methods time in seconds",
+		Buckets: []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+	}, []string{"method", "status"})
+
+	err = prometheus.Register(histogram)
+	if err != nil {
+		return nil, err
+	}
+
 	return &database{
 		db:        db,
 		serviceID: serviceID,
+		histogram: histogram,
 	}, nil
 }
 
@@ -75,6 +89,20 @@ func (db *database) Shutdown() error {
 }
 
 func (db *database) CreateRss(rss *Rss) error {
+	start := time.Now()
+
+	err := db.createRss(rss)
+
+	status := "ok"
+	if err != nil {
+		status = "error"
+	}
+	db.histogram.WithLabelValues("create_rss", status).Observe(time.Since(start).Seconds())
+
+	return err
+}
+
+func (db *database) createRss(rss *Rss) error {
 	if rss == nil {
 		return errors.New("empty rss")
 	}
@@ -88,6 +116,20 @@ func (db *database) CreateRss(rss *Rss) error {
 }
 
 func (db *database) GetItemsToCache(batchSize int) ([]*Rss, error) {
+	start := time.Now()
+
+	rss, err := db.getItemsToCache(batchSize)
+
+	status := "ok"
+	if err != nil {
+		status = "error"
+	}
+	db.histogram.WithLabelValues("get_items_to_cache", status).Observe(time.Since(start).Seconds())
+
+	return rss, err
+}
+
+func (db *database) getItemsToCache(batchSize int) ([]*Rss, error) {
 	now := time.Now()
 
 	ids, err := db.getNotLockedItems(batchSize, now)
@@ -113,6 +155,20 @@ func (db *database) GetItemsToCache(batchSize int) ([]*Rss, error) {
 }
 
 func (db *database) SaveCachedRss(id int64, rssFeed string, validUntil time.Time) error {
+	start := time.Now()
+
+	err := db.saveCachedRss(id, rssFeed, validUntil)
+
+	status := "ok"
+	if err != nil {
+		status = "error"
+	}
+	db.histogram.WithLabelValues("save_cached_rss", status).Observe(time.Since(start).Seconds())
+
+	return err
+}
+
+func (db *database) saveCachedRss(id int64, rssFeed string, validUntil time.Time) error {
 	query := "UPDATE rss SET is_locked=FALSE, cached_rss=$1, cached_valid_until=$2 WHERE id=$3"
 	_, err := db.db.Exec(query, rssFeed, validUntil, id)
 	if err != nil {
@@ -173,6 +229,20 @@ func (db *database) getLockedItems(ids []int64) ([]*Rss, error) {
 }
 
 func (db *database) GetCachedRss(email string, name string) (*RssCached, error) {
+	start := time.Now()
+
+	cachedRss, err := db.getCachedRss(email, name)
+
+	status := "ok"
+	if err != nil {
+		status = "error"
+	}
+	db.histogram.WithLabelValues("get_cached_rss", status).Observe(time.Since(start).Seconds())
+
+	return cachedRss, err
+}
+
+func (db *database) getCachedRss(email string, name string) (*RssCached, error) {
 	query := "SELECT sources, cached_rss FROM rss WHERE email=$1 and name=$2"
 	row := db.db.QueryRow(query, email, name)
 
@@ -194,6 +264,20 @@ func (db *database) GetCachedRss(email string, name string) (*RssCached, error) 
 }
 
 func (db *database) GetRssForIndex() ([]*Rss, error) {
+	start := time.Now()
+
+	rss, err := db.getRssForIndex()
+
+	status := "ok"
+	if err != nil {
+		status = "error"
+	}
+	db.histogram.WithLabelValues("get_rss_for_index", status).Observe(time.Since(start).Seconds())
+
+	return rss, err
+}
+
+func (db *database) getRssForIndex() ([]*Rss, error) {
 	query := "SELECT id, email, name, sources FROM rss ORDER BY added_time desc"
 	rows, err := db.db.Query(query)
 	if err != nil {
