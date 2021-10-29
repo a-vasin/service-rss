@@ -22,6 +22,7 @@ services:
 
       RSS_GOOGLE_AUTH_CLIENT_ID: ${RSS_GOOGLE_AUTH_CLIENT_ID}
       RSS_GOOGLE_AUTH_CLIENT_SECRET: ${RSS_GOOGLE_AUTH_CLIENT_SECRET}
+      RSS_GOOGLE_AUTH_REDIRECT_URL: ${RSS_GOOGLE_AUTH_REDIRECT_URL:-http://localhost/}
   postgres:
     image: "postgres:latest"
     volumes:

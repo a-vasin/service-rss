@@ -72,3 +72,6 @@ stop-local-db:
 
 build-docker:
 	docker build --tag service-rss .
+
+run-minikube:
+	./k8s/run.sh

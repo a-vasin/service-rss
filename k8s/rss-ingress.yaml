@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rss-ingress
+  namespace: rss
+spec:
+# Disable https to avoid alerts from browser about invalid certificate
+#  tls:
+#    - hosts:
+#      - rss.aggregator.test.com
+#      secretName: rss-secret-tls
+  rules:
+    - host: rss.aggregator.test.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rss-service
+                port:
+                  number: 80

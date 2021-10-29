@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rss-configmap
+  namespace: rss
+data:
+  db-host: "postgres-service"
+  db-port: "5432"
+  db-name: "postgres"
+  db-enable-ssl: "false"
+  server-port: "80"
+  server-read-timeout: "300ms"
+  server-write-timeout: "5000ms"
+  cacher-workers-count: "4"
+  cacher-pull-period: "500ms"
+  cacher-batch-size: "100"
+  google-auth-redirect-url: "http://rss.aggregator.test.com/"

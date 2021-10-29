@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rss-deployment
+  namespace: rss
+  labels:
+    app: rss
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rss
+  template:
+    metadata:
+      labels:
+        app: rss
+    spec:
+      containers:
+        - name: rss
+          image: service-rss
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+          env:
+            - name: RSS_DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: rss-configmap
+                  key: db-host
+            - name: RSS_DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: rss-configmap
+                  key: db-port
+            - name: RSS_DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: rss-configmap
+                  key: db-name
+            - name: RSS_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: username
+            - name: RSS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+            - name: RSS_DB_ENABLE_SSL
+              valueFrom:
+                configMapKeyRef:
+                  name: rss-configmap
+                  key: db-enable-ssl
+            - name: RSS_SERVER_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: rss-configmap
+                  key: server-port
+            - name: RSS_SERVER_READ_TIMEOUT
+              valueFrom:
+                configMapKeyRef:
+                  name: rss-configmap
+                  key: server-read-timeout
+            - name: RSS_SERVER_WRITE_TIMEOUT
+              valueFrom:
+                configMapKeyRef:
+                  name: rss-configmap
+                  key: server-write-timeout
+            - name: RSS_CACHER_WORKERS_COUNT
+              valueFrom:
+                configMapKeyRef:
+                  name: rss-configmap
+                  key: cacher-workers-count
+            - name: RSS_CACHER_PULL_PERIOD
+              valueFrom:
+                configMapKeyRef:
+                  name: rss-configmap
+                  key: cacher-pull-period
+            - name: RSS_CACHER_BATCH_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  name: rss-configmap
+                  key: cacher-batch-size
+            - name: RSS_GOOGLE_AUTH_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: google-auth-secret
+                  key: clientId
+            - name: RSS_GOOGLE_AUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: google-auth-secret
+                  key: secret
+            - name: RSS_GOOGLE_AUTH_REDIRECT_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: rss-configmap
+                  key: google-auth-redirect-url

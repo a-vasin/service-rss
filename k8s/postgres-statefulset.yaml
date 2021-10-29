@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-statefulset
+  namespace: rss
+  labels:
+    app: postgres
+spec:
+  serviceName: postgres-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:latest
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: username
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: rss-configmap
+                  key: db-name
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-volume-mount
+            - mountPath: /docker-entrypoint-initdb.d
+              name: postgres-init-script
+          lifecycle:
+            postStart:
+              exec:
+                command: [ "/bin/bash", "-c", "pg_isready && PGPASSWORD=$POSTGRES_PASSWORD psql -h $(hostname -i) -U $POSTGRES_USER $POSTGRES_DB -a -f /docker-entrypoint-initdb.d/db.sql" ]
+      volumes:
+        - name: postgres-volume-mount
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+        - name: postgres-init-script
+          configMap:
+            name: init-script.sql
+

@@ -1,4 +1,4 @@
-create table rss
+create table if not exists rss
 (
     id                 serial primary key,
     email              text   not null,
@@ -14,6 +14,6 @@ create table rss
     locked_time        timestamp
 );
 
-create index cached_valid_until_idx ON rss (cached_valid_until);
+create index if not exists cached_valid_until_idx ON rss (cached_valid_until);
 
-create unique index email_name_idx ON rss (email, name);
+create unique index if not exists email_name_idx ON rss (email, name);
