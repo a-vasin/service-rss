@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
 	"service-rss/internal/database"
@@ -14,15 +15,27 @@ import (
 )
 
 type rssGetHandler struct {
-	db         database.Database
-	aggregator rss.Aggregator
+	db               database.Database
+	aggregator       rss.Aggregator
+	cacheMissCounter prometheus.Counter
 }
 
-func NewRssGetHandler(db database.Database, aggregator rss.Aggregator) http.Handler {
-	return &rssGetHandler{
-		db:         db,
-		aggregator: aggregator,
+func NewRssGetHandler(db database.Database, aggregator rss.Aggregator) (http.Handler, error) {
+	counter := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "cache_miss_counter",
+		Help: "Counter of cache misses",
+	})
+
+	err := prometheus.Register(counter)
+	if err != nil {
+		return nil, err
 	}
+
+	return &rssGetHandler{
+		db:               db,
+		aggregator:       aggregator,
+		cacheMissCounter: counter,
+	}, nil
 }
 
 func (h *rssGetHandler) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
@@ -49,6 +62,8 @@ func (h *rssGetHandler) ServeHTTP(writer http.ResponseWriter, req *http.Request)
 	rssFeedString := []byte(rssCached.RssFeed)
 	// fallback in case rss has not been cached yet
 	if len(rssFeedString) == 0 {
+		h.cacheMissCounter.Inc()
+
 		rssFeed := h.aggregator.Aggregate(&rssCached.Rss)
 
 		rssFeedString, err = xml.Marshal(rssFeed)

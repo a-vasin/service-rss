@@ -17,9 +17,10 @@ func TestCacher_Shutdown(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	fetcher := NewMockFetcher(ctrl)
-	fetcher.EXPECT().Fetch(gomock.Any()).AnyTimes().Return(nil, nil)
-	aggregator := NewAggregator(fetcher)
+	f := NewMockFetcher(ctrl)
+	f.EXPECT().Fetch(gomock.Any()).AnyTimes().Return(nil, nil)
+
+	a := NewTestAggregator(f)
 
 	db := database.NewMockDatabase(ctrl)
 	db.EXPECT().GetItemsToCache(gomock.Any()).AnyTimes().Return(nil, nil)
@@ -29,7 +30,7 @@ func TestCacher_Shutdown(t *testing.T) {
 		CacherWorkersCount: 4,
 	}
 
-	h := NewCacher(cfg, db, aggregator)
+	h := NewCacher(cfg, db, a)
 
 	timeout := time.After(1 * time.Second)
 	done := make(chan bool)
@@ -108,8 +109,9 @@ func TestCacher_ProcessTask(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	fetcher := NewMockFetcher(ctrl)
-	aggregator := NewAggregator(fetcher)
+	f := NewMockFetcher(ctrl)
+
+	a := NewTestAggregator(f)
 
 	db := database.NewMockDatabase(ctrl)
 	db.EXPECT().SaveCachedRss(gomock.Any(), gomock.Any(), gomock.Any()).Do(func(id int64, rssFeed string, validUntil time.Time) {
@@ -121,7 +123,7 @@ func TestCacher_ProcessTask(t *testing.T) {
 
 	h := &Cacher{
 		db:         db,
-		aggregator: aggregator,
+		aggregator: a,
 	}
 
 	rss := &database.Rss{

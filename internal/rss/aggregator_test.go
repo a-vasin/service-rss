@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 
 	"service-rss/internal/database"
@@ -95,6 +96,19 @@ var (
 	}
 )
 
+func NewTestAggregator(fetcher Fetcher) Aggregator {
+	histogram := prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "aggregation_duration_seconds",
+		Help:    "Histogram of aggregation time in seconds",
+		Buckets: []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+	}, []string{"status"})
+
+	return &aggregator{
+		fetcher:   fetcher,
+		histogram: histogram,
+	}
+}
+
 func TestBuilder_Build(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -105,13 +119,13 @@ func TestBuilder_Build(t *testing.T) {
 			f.EXPECT().Fetch(url).Return(feed, nil)
 		}
 
-		b := NewAggregator(f)
+		a := NewTestAggregator(f)
 
 		rss := &database.Rss{
 			Name:    "test",
 			Sources: []string{"https://one.com/", "https://two.com/", "https://three.com/"},
 		}
-		feed := b.Aggregate(rss)
+		feed := a.Aggregate(rss)
 
 		buildDate := feed.Channel.LastBuildDate
 		_, err := time.Parse(time.RFC1123, buildDate)
@@ -126,13 +140,13 @@ func TestBuilder_Build(t *testing.T) {
 		f := NewMockFetcher(ctrl)
 		f.EXPECT().Fetch(gomock.Any()).Return(nil, errors.New("error"))
 
-		b := NewAggregator(f)
+		a := NewTestAggregator(f)
 
 		rss := &database.Rss{
 			Name:    "test",
 			Sources: []string{"https://one.com/"},
 		}
-		feed := b.Aggregate(rss)
+		feed := a.Aggregate(rss)
 
 		feed.Channel.LastBuildDate = ""
 

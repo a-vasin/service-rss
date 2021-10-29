@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
 	"service-rss/internal/database"
@@ -21,16 +22,43 @@ type Aggregator interface {
 }
 
 type aggregator struct {
-	fetcher Fetcher
+	fetcher   Fetcher
+	histogram *prometheus.HistogramVec
 }
 
-func NewAggregator(fetcher Fetcher) Aggregator {
-	return &aggregator{
-		fetcher: fetcher,
+func NewAggregator(fetcher Fetcher) (Aggregator, error) {
+	histogram := prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "aggregation_duration_seconds",
+		Help:    "Histogram of aggregation time in seconds",
+		Buckets: []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+	}, []string{"status"})
+
+	err := prometheus.Register(histogram)
+	if err != nil {
+		return nil, err
 	}
+
+	return &aggregator{
+		fetcher:   fetcher,
+		histogram: histogram,
+	}, nil
 }
 
-func (b *aggregator) Aggregate(rss *database.Rss) *dto.RssFeed {
+func (a *aggregator) Aggregate(rss *database.Rss) *dto.RssFeed {
+	start := time.Now()
+
+	feed := a.aggregate(rss)
+
+	status := "ok"
+	if feed == nil {
+		status = "error"
+	}
+	a.histogram.WithLabelValues(status).Observe(time.Since(start).Seconds())
+
+	return feed
+}
+
+func (a *aggregator) aggregate(rss *database.Rss) *dto.RssFeed {
 	if rss == nil {
 		log.Error("empty rss")
 		return nil
@@ -39,7 +67,7 @@ func (b *aggregator) Aggregate(rss *database.Rss) *dto.RssFeed {
 	ttl := int64(math.MaxInt64)
 	inputFeeds := make([]*dto.RssFeed, 0, len(rss.Sources))
 	for _, rssUrl := range rss.Sources {
-		feed, err := b.fetcher.Fetch(rssUrl)
+		feed, err := a.fetcher.Fetch(rssUrl)
 		if err != nil {
 			ttl = defaultTtl
 			log.WithError(err).

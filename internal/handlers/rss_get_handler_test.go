@@ -31,9 +31,11 @@ func TestRssGetHandler_ServeHTTP(t *testing.T) {
 
 	fetcher := rss.NewMockFetcher(ctrl)
 	fetcher.EXPECT().Fetch(gomock.Any()).AnyTimes().Return(nil, nil)
-	aggregator := rss.NewAggregator(fetcher)
+	aggregator, err := rss.NewAggregator(fetcher)
+	assert.NoError(t, err)
 
-	defaultHandler := NewRssGetHandler(db, aggregator)
+	defaultHandler, err := NewRssGetHandler(db, aggregator)
+	assert.NoError(t, err)
 
 	t.Run("empty email", func(t *testing.T) {
 		req := createReq("", "name")

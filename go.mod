@@ -9,6 +9,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/lib/pq v1.10.3
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus/client_golang v1.11.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	github.com/xeipuuv/gojsonschema v1.2.0

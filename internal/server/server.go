@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/xeipuuv/gojsonschema"
 
@@ -14,6 +15,7 @@ import (
 	"service-rss/internal/config"
 	"service-rss/internal/database"
 	"service-rss/internal/handlers"
+	"service-rss/internal/metrics"
 	"service-rss/internal/rss"
 )
 
@@ -28,6 +30,12 @@ func New(cfg *config.Config, db database.Database, aggregator rss.Aggregator) (*
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.AllowContentType("application/json"))
+
+	measurer, err := metrics.NewMeasurer()
+	if err != nil {
+		return nil, err
+	}
+	router.Use(measurer.MeasureDuration)
 
 	schema, err := loadJsonSchema("jsonschema/api/rss/create/request.json")
 	if err != nil {
@@ -46,8 +54,13 @@ func New(cfg *config.Config, db database.Database, aggregator rss.Aggregator) (*
 	}
 	router.Get("/", indexHandler.ServeHTTP)
 
-	rssGetHandler := handlers.NewRssGetHandler(db, aggregator)
+	rssGetHandler, err := handlers.NewRssGetHandler(db, aggregator)
+	if err != nil {
+		return nil, err
+	}
 	router.Get("/{email}/{name}", rssGetHandler.ServeHTTP)
+
+	router.Get("/metrics", promhttp.Handler().ServeHTTP)
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.ServerPort),
